@@ -1,6 +1,6 @@
 # Diversion - a proxy that chooses backends based on an x-version header
 {readFileSync, writeFileSync} = require 'fs'
-{Server} = require 'http'
+{request} = require 'http'
 bouncy   = require 'bouncy'
 semver   = require 'semver'
 unless (configFile = process.argv[2])
@@ -8,60 +8,86 @@ unless (configFile = process.argv[2])
   process.exit 1
 
 config = JSON.parse readFileSync configFile
-config.backends = config.backends
 
-registerBackend = (version, location) ->
+# Simple wrapper that reverses the arguments to setInterval
+doEvery = (delay, cb) -> setInterval cb, delay
+
+# Register a new backend with the proxy, this *will* block while it saves the
+# config file.
+registerBackend = (version, backend) ->
   config.backends[version] ?= []
-  config.backends[version].push location
+  config.backends[version].push backend
   writeFileSync configFile, JSON.stringify config, null, 2
-  status = 'ok'
-  {status, version, location}
+  {status: 'ok', location: backend.location, version}
 
-pickVersion = (reqVer) ->
-  semver.maxSatisfying Object.keys(config.backends), reqVer
+# Pick the maximum known version that satisfies a given range
+pickVersion = (range) ->
+  semver.maxSatisfying Object.keys(config.backends), range
 
+# List all known backends for a specific version
 listBackends = (version) ->
   return [null, []] unless version
   [version, config.backends[version] or []]
 
+# Pick one backend from a list, does a simple round-robin for now
 pickBackend = (backends) ->
-  # Simple round-robin for now
-  backend = backends.shift()
-  backends.push backend
+  backend = {}
+  until backend.alive
+    backend = backends.shift()
+    backends.push backend
   backend
 
+# The actual proxy server
 bouncy((req, bounce) ->
   reqVer = req.headers['x-version'] ? config.defaultVersion
-  # validRange matches ~0.1.0, ranges, and single versions
   unless semver.validRange(reqVer) and (version = pickVersion reqVer)
     res = bounce.respond()
     res.statusCode = 400
     return res.end "Bad version: #{reqVer}"
-  unavailable = -> 
+  unavailable = ->
     res = bounce.respond()
     res.statusCode = 404
     res.end "Version unavailable: #{version}"
   forward = ->
     backends = config.backends[version]
     if backends.length
-      target = pickBackend backends
-      bounce(target...).on 'error', (exc) ->
-        if not config.retry then unavailable()
-        else
-          config.backends[version] = backends.filter (backend) -> backend != target
-          forward()
+      backend = pickBackend backends
+      bounce(backend.location...).on 'error', (exc) ->
+        backend.alive = false
+        if config.retry then forward() else unavailable()
     else
       unavailable()
   forward()
 ).listen config.ports.proxy
 
+# If 
+if config.pollFrequency
+  doEvery config.pollFrequency, ->
+    for v, backends of config.backends
+      for b in backends
+        do (b) ->
+          if b.location.length == 1
+            host = '127.0.0.1'
+            port = b.location[0]
+          else
+            [host, port] = b.location
+          path = b.healthCheckPath or '/'
+          method = 'GET'
+          req = request {host, port, path, method}, (res) ->
+            b.alive = res.statusCode == 200
+          req.on 'error', -> b.alive = false
+          req.end()
 
 if config.ports.management
   require('lazorse') ->
     @port = config.ports.management
+    @route '/defaultVersion':
+      shortName: 'defaultVersion'
+      GET: -> @ok config.defaultVersion
+
     @route '/versions':
       shortName: "versions"
-      GET: -> @ok Object.keys(config.backends)
+      GET: -> @ok Object.keys config.backends
 
     @route '/version/{range}':
       shortName: "versionForRange"
@@ -75,14 +101,15 @@ if config.ports.management
       shortName: "backends"
       GET: -> @ok listBackends @version
       POST: ->
-        if (path = @req.body.path)
-          @ok registerBackend @version, [path]
-        else if (port = @req.body.port)
+        if (port = @req.body.port)
           host = @req.body.host ? @req.connection.remoteAddress
-          @ok registerBackend @version, [host, port]
+          backend = location: [host, port], alive: true
+          if @req.body.healthCheckPath
+            backend.healthCheckPath = @req.body.healthCheckPath
+          @ok registerBackend @version, backend
         else
           @res.statusCode = 422
-          @res.end '"path" or "port" is required'
+          @res.end '"port" is required'
 
     @coerce 'version': (v, next) =>
       if (valid = semver.valid v) then return next null, valid
