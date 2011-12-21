@@ -48,11 +48,11 @@ bouncy((req, bounce) ->
   unless semver.validRange(reqVer) and (version = pickVersion reqVer)
     res = bounce.respond()
     res.statusCode = 400
-    return res.end "Bad version: #{reqVer}"
+    return res.end JSON.stringify error: "Bad version: #{reqVer}"
   unavailable = ->
     res = bounce.respond()
     res.statusCode = 404
-    res.end "Version unavailable: #{version}"
+    res.end JSON.stringify error: "Version unavailable: #{version}"
   forward = ->
     backends = config.backends[version]
     if backends.length
