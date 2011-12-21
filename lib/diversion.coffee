@@ -4,7 +4,7 @@
 bouncy   = require 'bouncy'
 semver   = require 'semver'
 unless (configFile = process.argv[2])
-  console.error "Config file argument is required!"
+  console.error "usage: #{process.argv[1]} <config_file>"
   process.exit 1
 
 config = JSON.parse readFileSync configFile
