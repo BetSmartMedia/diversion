@@ -1,8 +1,10 @@
 # Diversion - a proxy that chooses backends based on an x-version header
 {readFileSync, writeFileSync} = require 'fs'
-{request} = require 'http'
-bouncy   = require 'bouncy'
-semver   = require 'semver'
+{request}  = require 'http'
+bouncy     = require 'bouncy'
+semver     = require 'semver'
+dateFormat = require 'dateformat'
+
 unless (configFile = process.argv[2])
   console.error "usage: #{process.argv[1]} <config_file>"
   process.exit 1
@@ -11,6 +13,11 @@ config = JSON.parse readFileSync configFile
 
 # Simple wrapper that reverses the arguments to setInterval
 doEvery = (delay, cb) -> setInterval cb, delay
+
+# Basic logging with date/time stamp
+log = (args...) ->
+	now = dateFormat new Date, "yyyy-mm-dd HH:MM:ss"
+	console.log "[" + now + "]", args...
 
 # Register a new backend with the proxy, this *will* block while it saves the
 # config file.
@@ -31,11 +38,9 @@ listBackends = (version) ->
 
 # Pick one backend from a list, does a simple round-robin for now
 pickBackend = (backends) ->
-  backend = {}
-  until backend.alive
-    backend = backends.shift()
-    backends.push backend
-  backend
+  for b in backends
+    return b if b.alive
+  null
 
 # The actual proxy server
 bouncy((req, bounce) ->
@@ -52,6 +57,7 @@ bouncy((req, bounce) ->
     backends = config.backends[version]
     if backends.length
       backend = pickBackend backends
+      return unavailable() unless backend?
       bounce(backend.location...).on 'error', (exc) ->
         backend.alive = false
         if config.retry then forward() else unavailable()
@@ -74,8 +80,15 @@ if config.pollFrequency
           path = b.healthCheckPath or '/'
           method = 'GET'
           req = request {host, port, path, method}, (res) ->
-            b.alive = res.statusCode == 200
-          req.on 'error', -> b.alive = false
+            if res.statusCode == 200
+              log "Backend #{v} is ALIVE: #{host}:#{port}" unless b.alive
+              b.alive = true
+             else
+              log "Backend #{v} is DEAD: #{host}:#{port}" if b.alive
+              b.alive = false
+          req.on 'error', ->
+            log "Backend #{v} is DEAD: #{host}:#{port}" if b.alive
+            b.alive = false
           req.end()
 
 if config.ports.management

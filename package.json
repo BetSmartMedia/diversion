@@ -14,7 +14,8 @@
   "dependencies": {
 		"bouncy": "1.0.5",
 		"lazorse": "0.1.3",
-		"semver": "1.0.12"
+		"semver": "1.0.12",
+		"dateformat": ""
 	},
   "devDependencies": {}
 }
