@@ -1,33 +1,6 @@
 {
   "defaultVersion": "~0.1.0",
-  "backends": {
-    "0.0.1": [
-      {
-        "location": [
-          "127.0.0.1",
-          3000
-        ],
-        "alive": false,
-        "healthCheckPath": "/health"
-      },
-      {
-        "location": [
-          "127.0.0.1",
-          3300
-        ],
-        "alive": true,
-        "healthCheckPath": "/health"
-      },
-      {
-        "location": [
-          "127.0.0.1",
-          3000
-        ],
-        "alive": true,
-        "healthCheckPath": "/health"
-      }
-    ]
-  },
+	"stateFile": "state.json",
   "pollFrequency": 1000,
   "ports": {
     "proxy": 8000,
