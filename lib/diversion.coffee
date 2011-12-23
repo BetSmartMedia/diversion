@@ -27,8 +27,8 @@ doEvery = (delay, cb) -> setInterval cb, delay
 
 # Basic logging with date/time stamp
 log = (args...) ->
-	now = dateFormat new Date, "yyyy-mm-dd HH:MM:ss"
-	console.log "[" + now + "]", args...
+  now = dateFormat new Date, "yyyy-mm-dd HH:MM:ss"
+  console.log "[" + now + "]", args...
 
 # Register a new backend with the proxy.
 # This *will* block while it saves the state file.
