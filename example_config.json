@@ -1,6 +1,6 @@
 {
   "defaultVersion": "~0.1.0",
-	"stateFile": "state.json",
+  "stateFile": "state.json",
   "pollFrequency": 1000,
   "ports": {
     "proxy": 8000,
