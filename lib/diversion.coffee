@@ -38,6 +38,11 @@ registerBackend = (version, location, cfg) ->
   fs.writeFileSync config.stateFile, JSON.stringify state, null, 2
   {status: 'ok', location: location, version: version}
 
+# Un-register a backend
+unregisterBackend = (version, location) ->
+  backends = state.backends[version]
+  delete backends[location] if backends?
+
 # Update the status (alive/dead) of an existing backend.
 # This *will* block while it saves the state file.
 updateBackend = (version, location, alive) ->
@@ -124,23 +129,30 @@ if config.ports.management
         return @ok "none" unless ver?
         @ok ver
 
-    @coerce 'range': (r, next) ->
+    @coerce range: (r, next) ->
       if (valid = semver.validRange r) then return next null, valid
       @error 'InvalidParameter', 'range', r
+
+    @helper getHostAndPort: (withPort) ->
+      if (port = @req.body.port)
+        host = @req.body.host ? @req.connection.remoteAddress
+        withPort.call @, host, port
+      else
+        @res.statusCode = 422
+        @res.end '"port" is required'
 
     @route '/backends/{version}':
       shortName: "backends"
       GET: -> @ok listBackends @version
       POST: ->
-        if (port = @req.body.port)
-          host = @req.body.host ? @req.connection.remoteAddress
+        @getHostAndPort (host, port) ->
           cfg = alive: true
           if @req.body.healthCheckPath
             cfg.healthCheckPath = @req.body.healthCheckPath
           @ok registerBackend @version, "#{host}:#{port}", cfg
-        else
-          @res.statusCode = 422
-          @res.end '"port" is required'
+      DELETE: ->
+        @getHostAndPort (host, port) ->
+          @ok unregisterBackend @version, "#{host}:#{port}"
 
     @coerce 'version': (v, next) =>
       if (valid = semver.valid v) then return next null, valid
