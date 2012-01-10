@@ -2,8 +2,10 @@
   "author": "Stephen Sugden <stephen@betsmartmedia.com> (www.betsmartmedia.com)",
   "name": "diversion",
   "description": "A simple proxy for API versioning",
-  "version": "0.1.1",
-	"bin": "server.js",
+  "version": "0.1.2",
+  "bin": {
+    "diversion": "server.js"
+  },
   "repository": {
     "type": "git",
     "url": "git://github.com/BetSmartMedia/diversion.git"
