@@ -3,13 +3,14 @@
   "name": "diversion",
   "description": "A simple proxy for API versioning",
   "version": "0.1.1",
+	"bin": "server.js",
   "repository": {
     "type": "git",
     "url": "git://github.com/BetSmartMedia/diversion.git"
   },
   "main": "lib",
   "engines": {
-    "node": "~0.4.12"
+    "node": ">=0.4.12"
   },
   "dependencies": {
     "coffee-script": "~1.2.0",
