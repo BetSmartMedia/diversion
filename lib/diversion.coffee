@@ -42,6 +42,8 @@ registerBackend = (version, location, cfg) ->
 unregisterBackend = (version, location) ->
   backends = state.backends[version]
   delete backends[location] if backends?
+  if Object.keys(backends).length is 0
+    delete state.backends[version]
 
 # Update the status (alive/dead) of an existing backend.
 # This *will* block while it saves the state file.
