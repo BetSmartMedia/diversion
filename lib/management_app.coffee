@@ -50,3 +50,22 @@ module.exports = (port, defaultVersion, state) ->
     @coerce 'version': (v, next) =>
       if (valid = semver.valid v) then return next null, valid
       next new @errors.InvalidParameter 'version', v
+
+    @before @findRoute, 'static', __dirname + '/../public', maxAge: 99999999999999
+
+  # mmm, sockety
+  sockjs = require 'sockjs'
+
+  uiSockServer = sockjs.createServer sockjs_url: "http://cdn.sockjs.org/sockjs-0.2.min.js"
+  uiSockServer.on 'connection', (conn) ->
+
+    conn.write JSON.stringify type: 'state', backends: state.getState().backends
+
+    for type in ['registered', 'unregistered', 'picked'] then do (type) ->
+      state.on type, (version, location) ->
+        conn.write JSON.stringify {type, version, location}
+
+    state.on 'healthChanged', (version, location, alive) ->
+      conn.write JSON.stringify {type: 'health', version, location, alive}
+
+  uiSockServer.installHandlers(server, prefix: '[/]monitor')

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Diversion UI</title>
+    <script src="http://cdn.sockjs.org/sockjs-0.2.min.js"></script>
+		<script src="jquery-1.7.1.min.js" type="text/javascript"></script>
+		<script src="knockout-2.0.0.js" type="text/javascript"></script>
+	</head>
+	<body>
+    <ul class="versions" data-bind="foreach: versions">
+      <li class="version" data-bind="style: { background: available() ? '#99ff99' : '#ff9999' }">
+      <h3>Version: <span data-bind="text: versionString"></span></h3>
+      <ul class="backends" data-bind="foreach: backends">
+        <li class="backend" data-bind="attr: { id: addressId }">
+        <i data-bind="text: address"></i>
+        <span class="indicator" style="display: none; background: #aaf">&nbsp;&nbsp;&nbsp;</span>
+        <br/>Alive: <strong data-bind="text: alive"></strong>
+        <button data-bind="click: unregister">Unregister</button>
+        </li>
+      </ul>
+      </li>
+    </ul><!-- /versions -->
+    <button data-bind="click: addBackend">Add Backend</button>
+  <script src="application.js" type="text/javascript"></script>
+	</body>
+</html>
