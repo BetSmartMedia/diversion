@@ -5,6 +5,7 @@ Copyright (C) 2011 Bet Smart Media Inc. (http://www.betsmartmedia.com)
 ###
 bouncy     = require 'bouncy'
 StateManager = require('./state_manager')
+semver = require 'semver'
 
 module.exports = (config) ->
   # initialize proxy routing table state
@@ -12,7 +13,12 @@ module.exports = (config) ->
 
   # The proxy server logic
   server = bouncy((req, bounce) ->
-    reqVer = req.headers['x-version'] ? config.defaultVersion
+    # URL -> Header -> 
+    if config.useURL and reqVer = semver.validRange req.url.split('/')[1]
+      path = '/' + req.url.split('/').slice(2).join('/')
+    else
+      reqVer = req.headers['x-version'] ? config.defaultVersion
+
     unless (version = state.pickVersion reqVer)
       res = bounce.respond()
       res.statusCode = 422
@@ -25,7 +31,7 @@ module.exports = (config) ->
       loc = state.pickBackend version
       return unavailable() unless loc?
       [host, port] = loc.split ':'
-      bounce(host, port).on 'error', (exc) ->
+      bounce({host, port, path}).on 'error', (exc) ->
         state.updateBackend version, loc, false
         if config.retry then forward() else unavailable()
     forward()

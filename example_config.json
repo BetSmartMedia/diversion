@@ -2,6 +2,7 @@
   "defaultVersion": "~0.1.0",
   "stateFile": "state.json",
   "pollFrequency": 1000,
+  "useURL": true,
   "ports": {
     "proxy": 8000,
     "management": 4000
