@@ -16,8 +16,8 @@
   },
   "dependencies": {
     "coffee-script": "~1.2.0",
-    "bouncy": "1.0.5",
-    "lazorse": "~0.4.0",
+    "bouncy": "~1.1.1",
+    "lazorse": "~0.4.7",
     "semver": "1.0.12",
     "dateformat": ""
   },
