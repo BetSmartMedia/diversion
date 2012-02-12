@@ -13,6 +13,7 @@
   "main": "lib",
   "files": [
     "lib",
+		"server.js",
     "example_config.json",
     "README.md",
     "public"
