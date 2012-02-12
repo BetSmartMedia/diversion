@@ -2,7 +2,7 @@
   "author": "Stephen Sugden <stephen@betsmartmedia.com> (www.betsmartmedia.com)",
   "name": "diversion",
   "description": "A simple proxy for API versioning",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "bin": {
     "diversion": "server.js"
   },
@@ -13,7 +13,7 @@
   "main": "lib",
   "files": [
     "lib",
-		"server.js",
+    "server.js",
     "example_config.json",
     "README.md",
     "public"
