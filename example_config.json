@@ -7,5 +7,5 @@
     "proxy": 8000,
     "management": 4000
   },
-  "retry": true
+  "maxRetries": 5
 }

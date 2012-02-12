@@ -23,17 +23,24 @@ module.exports = (config) ->
       res = bounce.respond()
       res.statusCode = 422
       return res.end JSON.stringify error: "Bad version: #{reqVer}"
+
     unavailable = ->
       res = bounce.respond()
       res.statusCode = 404
       res.end JSON.stringify error: "Version unavailable: #{version}"
+
+    retries = 0
     forward = ->
       loc = state.pickBackend version
       return unavailable() unless loc?
       [host, port] = loc.split ':'
       bounce({host, port, path}).on 'error', (exc) ->
-        state.updateBackend version, loc, false
-        if config.retry then forward() else unavailable()
+        if config.pollFrequency
+          state.updateBackend version, loc, false
+        if config.maxRetries and retries++ < config.maxRetries
+          forward()
+        else
+          unavailable()
     forward()
   )
 
