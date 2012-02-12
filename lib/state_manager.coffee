@@ -81,10 +81,12 @@ module.exports = StateManager = (stateFile) ->
       return cb err if err?
       cb null, deleted
 
-  # Update the status (alive/dead) of an existing backend.
   @updateBackend = (version, location, alive) ->
-    was_alive = state.backends[version][location].alive
-    state.backends[version][location].alive = alive
+    # The poller can check a recently removed backend, so ensure it exists
+    # before continuing
+    return unless backend = state.backends[version]?[location]
+    was_alive = backend.alive
+    backend.alive = alive
     if was_alive != alive
       @save()
       @emit 'healthChanged', version, location, alive
