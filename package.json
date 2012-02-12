@@ -16,6 +16,7 @@
     "server.js",
     "example_config.json",
     "README.md",
+    "test",
     "public"
   ],
   "engines": {
