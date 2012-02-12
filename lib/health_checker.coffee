@@ -6,18 +6,15 @@ A simple HTTP poller that health checks all backends periodically
 module.exports = (pollFrequency, state) ->
   setInterval ->
     for ver, backends of state.getState().backends
-      for loc, stat of backends
+      for loc, stat of backends when stat.healthCheckPath
         do (ver, loc, stat) ->
           [host, port] = loc.split ':'
-          # XXX - feedback needed: maybe only poll backends that have a set
-          # healthCheckPath?
-          path = stat.healthCheckPath or '/'
+          path = stat.healthCheckPath
           method = 'GET'
           req = request {host:host, port:port, path:path, method:method}, (res) ->
             state.updateBackend ver, loc, res.statusCode == 200
           req.on 'error', ->
             state.updateBackend ver, loc, false
           req.end()
- 
-  # End of setInterval
+    null # End of setInterval function
   , pollFrequency
