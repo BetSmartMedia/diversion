@@ -1,76 +1,31 @@
-#
-# Diversion - a proxy that chooses backends based on an X-Version header
-#
-# Copyright (C) 2011 Bet Smart Media Inc. (http://www.betsmartmedia.com)
-#
+###
+Diversion - a proxy that chooses backends based on an X-Version header
 
-{request}  = require 'http'
+Copyright (C) 2011 Bet Smart Media Inc. (http://www.betsmartmedia.com)
+###
 fs         = require 'fs'
 bouncy     = require 'bouncy'
-semver     = require 'semver'
 dateFormat = require 'dateformat'
+StateManager = require('./state_manager')
 
 unless (configFile = process.argv[2])
   console.error "usage: #{process.argv[1]} <config_file>"
   process.exit 1
 
-# Parse config and state files
+# Parse config
 config = JSON.parse fs.readFileSync configFile
-try
-  fs.statSync config.stateFile
-catch e
-  fs.writeFileSync config.stateFile, JSON.stringify backends: {}, null, 2
-state = JSON.parse fs.readFileSync config.stateFile
 
-# Simple wrapper that reverses the arguments to setInterval
-doEvery = (delay, cb) -> setInterval cb, delay
+# initialize proxy routing table state
+state = new StateManager(config.stateFile)
 
-# Basic logging with date/time stamp
-log = (args...) ->
+state.on 'healthChanged', (version, location, alive) ->
   now = dateFormat new Date, "yyyy-mm-dd HH:MM:ss"
-  console.log "[" + now + "]", args...
+  console.log "[#{now}] #{if alive then 'ALIVE' else 'DEAD'}: #{version}@#{location}"
 
-# Register a new backend with the proxy.
-# This *will* block while it saves the state file.
-registerBackend = (version, location, cfg) ->
-  state.backends[version] ?= {}
-  state.backends[version][location] = cfg
-  fs.writeFileSync config.stateFile, JSON.stringify state, null, 2
-  {status: 'ok', location: location, version: version}
-
-# Un-register a backend
-unregisterBackend = (version, location) ->
-  backends = state.backends[version]
-  delete backends[location] if backends?
-  if Object.keys(backends).length is 0
-    delete state.backends[version]
-
-# Update the status (alive/dead) of an existing backend.
-# This *will* block while it saves the state file.
-updateBackend = (version, location, alive) ->
-  state.backends[version][location].alive = alive
-  fs.writeFileSync config.stateFile, JSON.stringify state, null, 2
-
-# Pick the maximum known version that satisfies a given range
-pickVersion = (range) ->
-  semver.maxSatisfying Object.keys(state.backends), range
-
-# List all known backends for a specific version
-listBackends = (version) ->
-  return [null, []] unless version
-  [version, state.backends[version] or {}]
-
-# Pick one backend from a list, does a simple round-robin for now
-pickBackend = (backends) ->
-  # TODO: make this round-robin
-  for loc, stat of backends
-    return loc if stat.alive
-  null
-
-# The actual proxy server
+# The proxy server logic
 bouncy((req, bounce) ->
   reqVer = req.headers['x-version'] ? config.defaultVersion
-  unless semver.validRange(reqVer) and (version = pickVersion reqVer)
+  unless (version = state.pickVersion reqVer)
     res = bounce.respond()
     res.statusCode = 400
     return res.end JSON.stringify error: "Bad version: #{reqVer}"
@@ -79,83 +34,19 @@ bouncy((req, bounce) ->
     res.statusCode = 404
     res.end JSON.stringify error: "Version unavailable: #{version}"
   forward = ->
-    backends = state.backends[version]
-    if backends? and Object.keys(backends).length
-      loc = pickBackend backends
-      return unavailable() unless loc?
-      [host, port] = loc.split ':'
-      bounce(host, port).on 'error', (exc) ->
-        updateBackend version, loc, false
-        if config.retry then forward() else unavailable()
-    else
-      unavailable()
+    loc = state.pickBackend version
+    return unavailable() unless loc?
+    [host, port] = loc.split ':'
+    bounce(host, port).on 'error', (exc) ->
+      state.updateBackend version, loc, false
+      if config.retry then forward() else unavailable()
   forward()
 ).listen config.ports.proxy
 
 # Poll backends to see who's dead and who's alive
 if config.pollFrequency
-  doEvery config.pollFrequency, ->
-    for ver, backends of state.backends
-      for loc, stat of backends
-        do (ver, loc, stat) ->
-          [host, port] = loc.split ':'
-          path = stat.healthCheckPath or '/'
-          method = 'GET'
-          req = request {host:host, port:port, path:path, method:method}, (res) ->
-            if res.statusCode == 200 and not stat.alive
-              log "Backend #{ver} is ALIVE: #{host}:#{port}" unless stat.alive
-              updateBackend ver, loc, true
-            else if res.statusCode != 200 and stat.alive
-              log "Backend #{ver} is DEAD: #{host}:#{port}" if stat.alive
-              updateBackend ver, loc, false
-          req.on 'error', ->
-            log "Backend #{ver} is DEAD: #{host}:#{port}" if stat.alive
-            updateBackend ver, loc, false
-          req.end()
+  require('./health_checker')(config.pollFrequency, state)
 
+# Enable the management web-app
 if config.ports.management
-  require('lazorse') ->
-    @port = config.ports.management
-    @route '/defaultVersion':
-      shortName: 'defaultVersion'
-      GET: -> @ok config.defaultVersion
-
-    @route '/versions':
-      shortName: "versions"
-      GET: -> @ok Object.keys state.backends
-
-    @route '/version/{range}':
-      shortName: "versionForRange"
-      GET: ->
-        ver = pickVersion @range
-        return @ok "none" unless ver?
-        @ok ver
-
-    @coerce range: (r, next) ->
-      if (valid = semver.validRange r) then return next null, valid
-      @error 'InvalidParameter', 'range', r
-
-    @helper getHostAndPort: (withPort) ->
-      if (port = @req.body.port)
-        host = @req.body.host ? @req.connection.remoteAddress
-        withPort.call @, host, port
-      else
-        @res.statusCode = 422
-        @res.end '"port" is required'
-
-    @route '/backends/{version}':
-      shortName: "backends"
-      GET: -> @ok listBackends @version
-      POST: ->
-        @getHostAndPort (host, port) ->
-          cfg = alive: true
-          if @req.body.healthCheckPath
-            cfg.healthCheckPath = @req.body.healthCheckPath
-          @ok registerBackend @version, "#{host}:#{port}", cfg
-      DELETE: ->
-        @getHostAndPort (host, port) ->
-          @ok unregisterBackend @version, "#{host}:#{port}"
-
-    @coerce 'version': (v, next) =>
-      if (valid = semver.valid v) then return next null, valid
-      next new @errors.InvalidParameter 'version', v
+  require('./management_app')(config.ports.management, config.defaultVersion, state)
