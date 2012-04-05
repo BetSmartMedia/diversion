@@ -93,8 +93,16 @@ module.exports = StateManager = (stateFile) ->
 
   # Pick the maximum known version that satisfies a given range
   @pickVersion = (range) ->
-    return null unless semver.validRange(range)
-    semver.maxSatisfying Object.keys(state.backends), range
+    return null unless range = semver.validRange(range)
+    choices = Object.keys(state.backends)
+    if Boolean range.match /\ /
+      # When matching a range (not a specific version), skip versions with:
+      choices = choices.filter (v) ->
+        # pre-release tags...
+        return false if v.match /-.+$/
+        # or no available backends.
+        (b for _, b of state.backends[v] or {}).some (b) -> b.alive
+    semver.maxSatisfying choices, range
 
   @listVersions = -> Object.keys(state.backends)
  

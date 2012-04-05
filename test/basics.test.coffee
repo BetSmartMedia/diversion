@@ -22,17 +22,22 @@ describe "Proxy", ->
       assert.equal 422, res.statusCode
       done()
 
-  describe "with a backend", ->
+  describe "with a dead backend", ->
     before (start) ->
       state.registerBackend '0.1.0', '127.0.0.1:4043', {alive: false}, (err, registered) ->
         start(err)
 
-    it "has no available backends", (done) ->
+    it "won't match a range (422)", (done) ->
       http.get {path, host, port}, (res) ->
+        assert.equal 422, res.statusCode
+        done()
+
+    it "will match the exact version, but 404", (done) ->
+      http.get {path, host, port, headers: {'x-version': '0.1.0'}}, (res) ->
         assert.equal 404, res.statusCode
         done()
 
-    describe "that is alive", ->
+    describe "that is now alive", ->
       backendServer = null
       before (start) ->
         backendServer = http.createServer (req, res) ->
