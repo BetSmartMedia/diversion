@@ -24,7 +24,10 @@
   },
   "dependencies": {
     "bouncy": "~1.1.1",
-    "semver": "1.0.12"
+    "semver": "1.0.12",
+    "node-uuid": "~1.1.3",
+    "lazorse": "~0.4.7",
+    "sockjs": "~0.2.0"
   },
   "devDependencies": {
     "coffee-script": "~1.2.0",
@@ -35,8 +38,5 @@
     "test": "make test",
     "prepublish": "make test"
   },
-  "optionalDependencies": {
-    "lazorse": "~0.4.7",
-    "sockjs": "~0.2.0"
-  }
+  "optionalDependencies": { }
 }

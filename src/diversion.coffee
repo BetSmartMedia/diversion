@@ -6,14 +6,13 @@ Copyright (C) 2011 Bet Smart Media Inc. (http://www.betsmartmedia.com)
 bouncy     = require 'bouncy'
 StateManager = require('./state_manager')
 semver = require 'semver'
+uuid = require 'node-uuid'
 
 module.exports = (config) ->
-  # initialize proxy routing table state
-  state = new StateManager(config.stateFile)
+  # initialize proxy routing table
+  state = new StateManager config.stateFile
 
-  # The proxy server logic
-  server = bouncy((req, bounce) ->
-    # URL -> Header -> 
+  server = bouncy (req, bounce) ->
     if config.useURL and reqVer = semver.validRange req.url.split('/')[1]
       path = '/' + req.url.split('/').slice(2).join('/')
     else
@@ -23,6 +22,9 @@ module.exports = (config) ->
       res = bounce.respond()
       res.statusCode = 422
       return res.end JSON.stringify error: "Bad version: #{reqVer}"
+
+    if config.tagRequests
+      headers = 'x-request-id': uuid()
 
     unavailable = ->
       res = bounce.respond()
@@ -34,15 +36,15 @@ module.exports = (config) ->
       loc = state.pickBackend version
       return unavailable() unless loc?
       [host, port] = loc.split ':'
-      bounce({host, port, path}).on 'error', (exc) ->
+      bounce({host, port, path, headers}).on 'error', (exc) ->
         if config.pollFrequency
           state.updateBackend version, loc, false
         if config.maxRetries and retries++ < config.maxRetries
           forward()
         else
           unavailable()
+
     forward()
-  )
 
   # Poll backends to see who's dead and who's alive
   if config.pollFrequency
