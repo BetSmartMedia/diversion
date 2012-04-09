@@ -10,7 +10,7 @@
     "type": "git",
     "url": "git://github.com/BetSmartMedia/diversion.git"
   },
-  "main": "lib",
+  "main": "lib/diversion",
   "files": [
     "lib",
     "server.js",
@@ -23,19 +23,20 @@
     "node": ">=0.4.12"
   },
   "dependencies": {
-    "coffee-script": "~1.2.0",
     "bouncy": "~1.1.1",
-    "lazorse": "~0.4.7",
-    "semver": "1.0.12",
-    "dateformat": "",
-    "sockjs": "~0.2.0"
+    "semver": "1.0.12"
   },
   "devDependencies": {
+    "coffee-script": "~1.2.0",
     "mocha": "~0.12.0"
   },
   "scripts": {
     "start": "node server.js",
-    "test": "mocha"
+    "test": "make test",
+    "prepublish": "make test"
   },
-  "optionalDependencies": {}
+  "optionalDependencies": {
+    "lazorse": "~0.4.7",
+    "sockjs": "~0.2.0"
+  }
 }
