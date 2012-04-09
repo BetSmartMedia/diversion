@@ -28,8 +28,7 @@ The following events are only emitted if the stateFile config option is set.
 If a stateFile is given, and writing to it fails at startup time, the process
 will exit immediately with a return code of 2.
 ###
-module.exports = StateManager = (stateFile) ->
-  @stateFile = stateFile
+module.exports = StateManager = (@stateFile) ->
 
   state = backends: {}
  
@@ -127,5 +126,5 @@ module.exports = StateManager = (stateFile) ->
   @traffic = -> requestCounters
   null
 
-inherits(StateManager, EventEmitter)
+inherits StateManager, EventEmitter
 

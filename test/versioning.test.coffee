@@ -26,7 +26,7 @@ versionedService = (version, cb) ->
   .listen 0, host, -> cb(server)
 
 describe "Proxy with multiple versions", ->
-  backends = []
+  test_backends = []
   port = null
   before (start) ->
     i = 0
@@ -44,13 +44,13 @@ describe "Proxy with multiple versions", ->
     for version in versions then do (version) ->
       i++
       versionedService version, (backend) ->
-        backends.push backend
+        test_backends.push backend
         bport = backend.address().port
         server.state.registerBackend version, host+':'+bport, alive: true, step
 
   after = ->
     server.close()
-    for backend in backends
+    for backend in test_backends
       backend.close()
 
   path = '/'
