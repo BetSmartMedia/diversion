@@ -15,6 +15,7 @@
     "lib",
     "server.js",
     "example_config.json",
+		"Makefile",
     "README.md",
     "test",
     "public"
