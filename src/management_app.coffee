@@ -1,21 +1,20 @@
 semver = require 'semver'
 
 module.exports = (port, defaultVersion, state) ->
-  server = require('lazorse') ->
-    @port = port
+  server = require('lazorse').server {port}, ->
 
-    @route '/traffic':
+    @resource '/traffic':
       GET: -> @ok state.traffic()
 
-    @route '/defaultVersion':
+    @resource '/defaultVersion':
       shortName: 'defaultVersion'
       GET: -> @ok defaultVersion
 
-    @route '/versions':
+    @resource '/versions':
       shortName: "versions"
       GET: -> @ok state.listVersions()
 
-    @route '/version/{range}':
+    @resource '/version/{range}':
       shortName: "versionForRange"
       GET: ->
         @ok pickVersion(@range) or false
@@ -32,7 +31,7 @@ module.exports = (port, defaultVersion, state) ->
         @res.statusCode = 422
         @res.end '"port" is required'
 
-    @route '/backends/{version}':
+    @resource '/backends/{version}':
       shortName: "backends"
       GET: -> @ok state.listBackends @version
       POST: ->
@@ -47,7 +46,7 @@ module.exports = (port, defaultVersion, state) ->
         @getHostAndPort (host, port) ->
           state.unregisterBackend @version, "#{host}:#{port}", @data
 
-    @coerce 'version': (v, next) =>
+    @coerce 'version', "A semver compatible version string", (v, next) =>
       if (valid = semver.valid v) then return next null, valid
       next new @errors.InvalidParameter 'version', v
 
