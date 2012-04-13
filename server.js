@@ -8,7 +8,6 @@ if (!(configFile = process.argv[2])) {
 
 config = JSON.parse(fs.readFileSync(configFile))
 
-require('coffee-script')
 diversion = require('./lib/diversion')
 
 server = diversion(config)
