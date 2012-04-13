@@ -18,4 +18,4 @@ test : all
 	@mocha --compilers coffee:coffee-script --reporter $(REPORTER)
 
 clean :
-	@rm *.js lib/*.js || true
+	@rm lib/*.js || true
