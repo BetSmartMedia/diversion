@@ -32,7 +32,7 @@ module.exports = StateManager = (@stateFile) ->
 
   state = backends: {}
  
-  # Necessary for initaling monitoring connections
+  # Necessary for initializing monitoring connections and tests
   @getState = -> state
 
   # If we have a stateFile, read/initialize it and install the save handler
@@ -115,6 +115,7 @@ module.exports = StateManager = (@stateFile) ->
   # Pick one backend from a list, does a simple round-robin for now
   @pickBackend = (version) ->
     backends = state.backends[version]
+    return null unless backends
     locations = Object.keys(backends).filter (l) -> backends[l].alive
     return null unless locations.length
     requestCounters[version] ?= 0
