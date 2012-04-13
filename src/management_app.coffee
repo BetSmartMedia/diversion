@@ -50,7 +50,10 @@ module.exports = (port, defaultVersion, state) ->
       if (valid = semver.valid v) then return next null, valid
       next new @errors.InvalidParameter 'version', v
 
-    @before @findResource, 'static', __dirname + '/../public', maxAge: 99999999999999
+    @before @findResource, [
+      ['static', __dirname + '/../public', maxAge: 99999999999999]
+      ['bodyParser']
+    ]
 
   # mmm, sockety
   sockjs = require 'sockjs'
