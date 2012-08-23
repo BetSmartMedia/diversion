@@ -1,3 +1,4 @@
+[![build status](https://secure.travis-ci.org/BetSmartMedia/diversion.png)](http://travis-ci.org/BetSmartMedia/diversion)
 # Diversion
 
 Diversion is a versioning HTTP proxy based on
