@@ -31,7 +31,7 @@ will exit immediately with a return code of 2.
 module.exports = StateManager = (@stateFile) ->
 
   state = backends: {}
- 
+
   # Necessary for initializing monitoring connections and tests
   @getState = -> state
 
@@ -40,7 +40,7 @@ module.exports = StateManager = (@stateFile) ->
     # if state file doesn't exist, meh
     try
       state = JSON.parse fs.readFileSync @stateFile
-   
+
     try
       fs.writeFileSync @stateFile, JSON.stringify(state, null, 2)
     catch e
@@ -48,15 +48,32 @@ module.exports = StateManager = (@stateFile) ->
       console.error "Writing state file #{@stateFile} failed!\n#{e}"
       process.exit 2
 
-    # The normal save handler
-    @save = (cb) ->
-      fs.writeFile @stateFile, JSON.stringify(state, null, 2), (err) =>
+    # Install a save method that writes the state to disk after changes.
+    saving = false  # guard & serialize disk writes.
+    @save = (cb) =>
+      if saving
+        @once 'saved', @save
+        return
+
+      saving = true
+
+      wrappedCb = (err) =>
+        saving = false
         if err
           @emit 'saveFailed', err
+          cb(err)
         else
           @emit 'saved', state
-        return cb(err) if typeof cb is 'function'
- 
+          cb()
+
+      tmpPath = '.' + @stateFile + '.tmp'
+
+      fs.writeFile tmpPath, JSON.stringify(state, null, 2), (err) =>
+        return wrappedCb(err) if err
+        fs.rename tmpPath, @stateFile, (err) ->
+          return wrappedCb(err) if err
+          fs.unlink tmpPath, wrappedCb
+
   # Else install a no-op save handler
   else
     @save = (cb) -> cb() if typeof cb is 'function'
@@ -104,7 +121,7 @@ module.exports = StateManager = (@stateFile) ->
     semver.maxSatisfying choices, range
 
   @listVersions = -> Object.keys(state.backends)
- 
+
   # List all known backends for a specific version
   @listBackends = (version) ->
     return [null, []] unless version
