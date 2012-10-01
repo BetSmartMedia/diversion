@@ -1,4 +1,4 @@
-# Diversion
+# Diversion [![Build Status](https://secure.travis-ci.org/BetSmartMedia/diversion.png)](http://travis-ci.org/BetSmartMedia/diversion)
 
 Diversion is a versioning HTTP proxy based on
 [bouncy](http://github.com/substack/bouncy) and
