@@ -3,10 +3,10 @@ Diversion - a proxy that chooses backends based on an X-Version header
 
 Copyright (C) 2011 Bet Smart Media Inc. (http://www.betsmartmedia.com)
 ###
-bouncy     = require 'bouncy'
+bouncy       = require 'bouncy'
 StateManager = require('./state_manager')
-semver = require 'semver'
-uuid = require 'node-uuid'
+semver       = require 'semver'
+uuid         = require 'node-uuid'
 
 module.exports = (config) ->
   # initialize proxy routing table
@@ -31,20 +31,20 @@ module.exports = (config) ->
       res.statusCode = 404
       res.end JSON.stringify error: "Version unavailable: #{version}"
 
-    retries = 0
-    forward = ->
+    do forwardRequest = (attempt=0) ->
       loc = state.pickBackend version
       return unavailable() unless loc?
       [host, port] = loc.split ':'
-      bounce({host, port, path, headers}).on 'error', (exc) ->
+
+      handleError = (err) ->
         if config.pollFrequency
-          state.updateBackend version, loc, false
-        if config.maxRetries and retries++ < config.maxRetries
-          forward()
+          state.updateBackend(version, loc, false)
+        if config.maxRetries and attempt < config.maxRetries
+          forwardRequest(attempt + 1)
         else
           unavailable()
 
-    forward()
+      bounce({host, port, path, headers}).on('error', handleError)
 
   # Poll backends to see who's dead and who's alive
   if config.pollFrequency
