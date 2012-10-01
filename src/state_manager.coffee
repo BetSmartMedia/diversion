@@ -37,9 +37,13 @@ module.exports = StateManager = (@stateFile) ->
 
   # If we have a stateFile, read/initialize it and install the save handler
   if @stateFile
-    # if state file doesn't exist, meh
-    try
-      state = JSON.parse fs.readFileSync @stateFile
+    if fs.existsSync @stateFile
+      try
+        state = JSON.parse fs.readFileSync @stateFile
+      catch e
+        fs.renameSync @stateFile, @stateFile + ".recovery"
+        console.error "Failed to load #{@stateFile} #{e}. Saved to #{@stateFile}.recovery"
+        process.exit 3
 
     try
       fs.writeFileSync @stateFile, JSON.stringify(state, null, 2)
