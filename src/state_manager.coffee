@@ -65,10 +65,10 @@ module.exports = StateManager = (@stateFile) ->
         saving = false
         if err
           @emit 'saveFailed', err
-          cb(err)
         else
           @emit 'saved', state
-          cb()
+        if cb
+          cb(err)
 
       tmpPath = '.' + @stateFile + '.tmp'
 
