@@ -56,8 +56,7 @@ module.exports = StateManager = (@stateFile) ->
     saving = false  # guard & serialize disk writes.
     @save = (cb) =>
       if saving
-        @once 'saved', @save
-        return
+        return @once 'saved', @save
 
       saving = true
 
@@ -70,7 +69,7 @@ module.exports = StateManager = (@stateFile) ->
         if cb
           cb(err)
 
-      tmpPath = '.' + @stateFile + '.tmp'
+      tmpPath = @stateFile + '.tmp'
 
       fs.writeFile tmpPath, JSON.stringify(state, null, 2), (err) =>
         return wrappedCb(err) if err
