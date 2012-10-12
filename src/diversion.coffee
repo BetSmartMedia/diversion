@@ -31,6 +31,9 @@ module.exports = (config) ->
       res.statusCode = 404
       res.end JSON.stringify error: "Version unavailable: #{version}"
 
+    # grab a copy of the buffered header data before bouncing
+    headerChunks = copyChunks bounce.stream.chunks
+
     do forwardRequest = (attempt=0) ->
       loc = state.pickBackend version
       return unavailable() unless loc?
@@ -40,11 +43,17 @@ module.exports = (config) ->
         if config.pollFrequency
           state.updateBackend(version, loc, false)
         if config.maxRetries and attempt < config.maxRetries
+          bounce.stream.chunks = copyChunks headerChunks
           forwardRequest(attempt + 1)
         else
           unavailable()
 
       bounce({host, port, path, headers}).on('error', handleError)
+
+  copyChunks = (chunks) -> chunks.map (chunk) ->
+    target = new Buffer chunk.length
+    chunk.copy(target)
+    target
 
   # Poll backends to see who's dead and who's alive
   if config.pollFrequency
