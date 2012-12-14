@@ -73,9 +73,7 @@ module.exports = StateManager = (@stateFile) ->
 
       fs.writeFile tmpPath, JSON.stringify(state, null, 2), (err) =>
         return wrappedCb(err) if err
-        fs.rename tmpPath, @stateFile, (err) ->
-          return wrappedCb(err) if err
-          fs.unlink tmpPath, wrappedCb
+        fs.rename tmpPath, @stateFile, wrappedCb
 
   # Else install a no-op save handler
   else
