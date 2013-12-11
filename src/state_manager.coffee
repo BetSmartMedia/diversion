@@ -56,7 +56,7 @@ module.exports = StateManager = (@stateFile) ->
     saving = false  # guard & serialize disk writes.
     @save = (cb) =>
       if saving
-        return @once 'saved', @save
+        return @once 'saved', => @save(cb)
 
       saving = true
 
